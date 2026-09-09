@@ -1,0 +1,6 @@
+{
+  "name": "DodgeFisura",
+  "description": "Community-driven safety map for Buenos Aires to detect street hotspots and navigate safe late-night walking routes dodging hazardous zones.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
