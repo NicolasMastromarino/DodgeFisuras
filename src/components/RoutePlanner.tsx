@@ -25,6 +25,7 @@ interface RoutePlannerProps {
   onSetDestination: (point: RoutePoint | null) => void;
   onSwapPoints: () => void;
   onStartPicking: (type: 'origin' | 'destination') => void;
+  onOpenLocationPicker?: (field: 'origin' | 'destination') => void;
   onSelectPreset: (preset: SafetyPreset) => void;
   presets: SafetyPreset[];
   isCalculating: boolean;
@@ -39,6 +40,7 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
   onSelectRouteType,
   onSwapPoints,
   onStartPicking,
+  onOpenLocationPicker,
   onSelectPreset,
   presets,
   isCalculating,
@@ -67,29 +69,34 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Origin & Destination Inputs */}
+        {/* Origin & Destination Inputs (Uber-style) */}
         <div className="relative rounded-xl bg-zinc-950/70 border border-zinc-800/90 p-3 space-y-2">
           {/* Origin (A) */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/40 flex items-center justify-center text-xs font-bold shrink-0">
+          <div
+            onClick={() => onOpenLocationPicker ? onOpenLocationPicker('origin') : onStartPicking('origin')}
+            className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/70 cursor-pointer transition group"
+          >
+            <div className="w-7 h-7 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/40 flex items-center justify-center text-xs font-bold shrink-0 group-hover:scale-105 transition">
               A
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
-                Punto de Origen
-              </span>
-              <p className="text-xs text-zinc-200 truncate font-medium">
-                {origin ? origin.name : 'Selecciona en el mapa o elige un trayecto'}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-sky-400 uppercase tracking-wider block">
+                  Punto de Partida
+                </span>
+                <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 transition">
+                  Toca para cambiar
+                </span>
+              </div>
+              <p className="text-xs text-zinc-100 truncate font-semibold">
+                {origin ? origin.name : 'Buscar dirección o estación...'}
               </p>
+              {origin?.address && (
+                <p className="text-[10px] text-zinc-400 truncate">
+                  {origin.address}
+                </p>
+              )}
             </div>
-            <button
-              id="btn-pick-origin"
-              type="button"
-              onClick={() => onStartPicking('origin')}
-              className="px-2 py-1 text-[11px] rounded bg-zinc-800 hover:bg-zinc-700 text-sky-300 border border-zinc-700 shrink-0 transition"
-            >
-              Fijar en mapa
-            </button>
           </div>
 
           {/* Swap Button Divider */}
@@ -98,35 +105,43 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             <button
               id="btn-swap-points"
               type="button"
-              onClick={onSwapPoints}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSwapPoints();
+              }}
               title="Invertir origen y destino"
-              className="relative z-10 p-1 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700 transition"
+              className="relative z-10 p-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700 transition shadow-sm hover:scale-110"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Destination (B) */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs font-bold shrink-0">
+          <div
+            onClick={() => onOpenLocationPicker ? onOpenLocationPicker('destination') : onStartPicking('destination')}
+            className="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/70 cursor-pointer transition group"
+          >
+            <div className="w-7 h-7 rounded-sm bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs font-bold shrink-0 group-hover:scale-105 transition">
               B
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">
-                Punto de Destino
-              </span>
-              <p className="text-xs text-zinc-200 truncate font-medium">
-                {destination ? destination.name : 'Selecciona en el mapa o elige un trayecto'}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">
+                  Punto de Destino
+                </span>
+                <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 transition">
+                  Toca para cambiar
+                </span>
+              </div>
+              <p className="text-xs text-zinc-100 truncate font-semibold">
+                {destination ? destination.name : 'Buscar destino (ej: Palermo, Once, Callao)...'}
               </p>
+              {destination?.address && (
+                <p className="text-[10px] text-zinc-400 truncate">
+                  {destination.address}
+                </p>
+              )}
             </div>
-            <button
-              id="btn-pick-destination"
-              type="button"
-              onClick={() => onStartPicking('destination')}
-              className="px-2 py-1 text-[11px] rounded bg-zinc-800 hover:bg-zinc-700 text-emerald-300 border border-zinc-700 shrink-0 transition"
-            >
-              Fijar en mapa
-            </button>
           </div>
         </div>
 

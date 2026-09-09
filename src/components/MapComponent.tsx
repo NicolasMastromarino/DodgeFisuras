@@ -11,6 +11,7 @@ interface MapComponentProps {
   mapTheme: 'dark' | 'light';
   pickingLocationFor: 'origin' | 'destination' | 'report' | null;
   onMapClickCoordinates: (coords: Coordinates) => void;
+  onCancelPicking?: () => void;
   onSelectHotspot: (hotspot: Hotspot) => void;
   onConfirmHotspot: (id: string) => void;
   userLocation: Coordinates | null;
@@ -27,6 +28,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   mapTheme,
   pickingLocationFor,
   onMapClickCoordinates,
+  onCancelPicking,
   onSelectHotspot,
   onConfirmHotspot,
   userLocation,
@@ -62,7 +64,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
     mapInstanceRef.current = map;
 
+    // ResizeObserver to ensure Leaflet recalculates dimensions when sidebar or tab toggles
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -334,13 +348,29 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
       {/* Picking Location Overlay Banner */}
       {pickingLocationFor && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-xl bg-zinc-900/95 border border-sky-500/50 shadow-2xl flex items-center gap-2 text-xs font-semibold text-sky-300 backdrop-blur-md animate-bounce">
-          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-          {pickingLocationFor === 'origin'
-            ? 'Haz clic en el mapa para marcar el Origen (A)'
-            : pickingLocationFor === 'destination'
-            ? 'Haz clic en el mapa para marcar el Destino (B)'
-            : 'Haz clic en el mapa donde detectaste el foco de fisuras'}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-xl bg-zinc-900/95 border border-sky-500/50 shadow-2xl flex items-center gap-3 text-xs font-semibold text-sky-300 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+            <span>
+              {pickingLocationFor === 'origin'
+                ? 'Haz clic en el mapa para marcar el Origen (A)'
+                : pickingLocationFor === 'destination'
+                ? 'Haz clic en el mapa para marcar el Destino (B)'
+                : 'Haz clic en el mapa donde detectaste el foco de fisuras'}
+            </span>
+          </div>
+          {onCancelPicking && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelPicking();
+              }}
+              className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[11px] border border-zinc-700 transition"
+            >
+              Cancelar
+            </button>
+          )}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { ReportModal } from './components/ReportModal';
 import { SOSModal } from './components/SOSModal';
 import { HotspotDetailsDrawer } from './components/HotspotDetailsDrawer';
 import { FilterToolbar } from './components/FilterToolbar';
+import { UberLocationPicker } from './components/UberLocationPicker';
 import { INITIAL_HOTSPOTS, SAFETY_PRESETS } from './data/hotspots';
 import { Coordinates, Hotspot, RouteCalculationResult, RoutePoint, SafetyPreset, SeverityLevel } from './types';
 import { computeAvoidanceRoutes } from './utils/routingEngine';
@@ -51,6 +52,8 @@ export default function App() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isSOSModalOpen, setIsSOSModalOpen] = useState(false);
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
+  const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+  const [locationPickerTarget, setLocationPickerTarget] = useState<'origin' | 'destination'>('origin');
 
   // Map settings
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
@@ -210,6 +213,17 @@ export default function App() {
     }
   };
 
+  // Select location from Uber picker
+  const handleSelectLocationPoint = (field: 'origin' | 'destination', point: RoutePoint) => {
+    if (field === 'origin') {
+      setOrigin(point);
+    } else {
+      setDestination(point);
+    }
+    setCenterCoords(point.coordinates);
+    setZoomLevel(15);
+  };
+
   // Reset to Buenos Aires center
   const handleCenterBuenosAires = () => {
     setCenterCoords({ lat: -34.6037, lng: -58.3816 });
@@ -319,6 +333,10 @@ export default function App() {
               onSetOrigin={setOrigin}
               onSetDestination={setDestination}
               onSwapPoints={handleSwapPoints}
+              onOpenLocationPicker={(field) => {
+                setLocationPickerTarget(field);
+                setIsLocationPickerOpen(true);
+              }}
               onStartPicking={(type) => {
                 setPickingLocationFor(type);
                 setMobileTab('map');
@@ -345,6 +363,7 @@ export default function App() {
             destination={destination}
             mapTheme={mapTheme}
             pickingLocationFor={pickingLocationFor}
+            onCancelPicking={() => setPickingLocationFor(null)}
             onMapClickCoordinates={handleMapClickCoordinates}
             onSelectHotspot={setSelectedHotspot}
             onConfirmHotspot={handleConfirmHotspot}
@@ -416,6 +435,22 @@ export default function App() {
         isOpen={isSOSModalOpen}
         onClose={() => setIsSOSModalOpen(false)}
         userCoords={userLocation}
+      />
+
+      {/* Uber-style Starting & Ending Point Selector */}
+      <UberLocationPicker
+        isOpen={isLocationPickerOpen}
+        onClose={() => setIsLocationPickerOpen(false)}
+        targetField={locationPickerTarget}
+        currentOrigin={origin}
+        currentDestination={destination}
+        onSelectPoint={handleSelectLocationPoint}
+        onPickOnMap={(field) => {
+          setPickingLocationFor(field);
+          setMobileTab('map');
+        }}
+        userCoords={userLocation}
+        onRequestGeolocation={handleLocateMe}
       />
     </div>
   );

@@ -52,5 +52,5 @@
 
 /* Tactical night mode filter for OpenStreetMap tiles (100% free, zero API key required) */
 .leaflet-tile-night {
-  filter: brightness(0.65) invert(1) contrast(2.4) hue-rotate(200deg) saturate(0.25) brightness(0.9) !important;
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) !important;
 }
