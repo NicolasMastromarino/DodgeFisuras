@@ -17,6 +17,8 @@ interface MapComponentProps {
   userLocation: Coordinates | null;
   centerCoords: Coordinates;
   zoomLevel: number;
+  pendingReportCoords?: Coordinates | null;
+  onConfirmReportCoords?: () => void;
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({
@@ -33,7 +35,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   onConfirmHotspot,
   userLocation,
   centerCoords,
-  zoomLevel
+  zoomLevel,
+  pendingReportCoords,
+  onConfirmReportCoords,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -42,6 +46,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
   const routesLayerRef = useRef<L.LayerGroup | null>(null);
   const userLocationLayerRef = useRef<L.LayerGroup | null>(null);
+  const reportMarkerLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Initialize Map
   useEffect(() => {
@@ -61,6 +66,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     markersLayerRef.current = L.layerGroup().addTo(map);
     routesLayerRef.current = L.layerGroup().addTo(map);
     userLocationLayerRef.current = L.layerGroup().addTo(map);
+    reportMarkerLayerRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
@@ -82,7 +88,17 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     };
   }, []);
 
-  // Update Base Tiles based on theme
+  // Invalidate map size when pickingLocationFor changes to guarantee tiles render properly
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.invalidateSize();
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [pickingLocationFor]);
+
+  // Update Base Tiles based on theme using standard OpenStreetMap (100% free, no API key, no watermark)
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
@@ -337,6 +353,32 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     }
   }, [userLocation]);
 
+  // Pending Report Marker on Map
+  useEffect(() => {
+    if (!reportMarkerLayerRef.current || !mapInstanceRef.current) return;
+    reportMarkerLayerRef.current.clearLayers();
+
+    if (pendingReportCoords) {
+      const reportPin = L.divIcon({
+        html: `
+          <div class="relative flex items-center justify-center" style="width: 40px; height: 40px;">
+            <div class="absolute inset-0 rounded-full bg-rose-500/40 animate-ping"></div>
+            <div class="w-9 h-9 rounded-2xl bg-rose-600 border-2 border-white shadow-2xl flex items-center justify-center text-white text-base">
+              ⚠️
+            </div>
+          </div>
+        `,
+        className: 'report-pin-marker',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+
+      L.marker([pendingReportCoords.lat, pendingReportCoords.lng], { icon: reportPin })
+        .bindTooltip('Foco de alerta a reportar', { permanent: true, direction: 'top', offset: [0, -20] })
+        .addTo(reportMarkerLayerRef.current);
+    }
+  }, [pendingReportCoords]);
+
   return (
     <div className="relative w-full h-full min-h-[450px] overflow-hidden bg-zinc-950">
       {/* Map Element */}
@@ -348,29 +390,47 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
       {/* Picking Location Overlay Banner */}
       {pickingLocationFor && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-xl bg-zinc-900/95 border border-sky-500/50 shadow-2xl flex items-center gap-3 text-xs font-semibold text-sky-300 backdrop-blur-md">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2.5 rounded-2xl bg-zinc-900/95 border border-sky-500/60 shadow-2xl flex flex-wrap items-center gap-3 text-xs font-medium text-zinc-100 backdrop-blur-md max-w-[92vw]">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-            <span>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+            <span className="font-semibold text-sky-200">
               {pickingLocationFor === 'origin'
-                ? 'Haz clic en el mapa para marcar el Origen (A)'
+                ? 'Toca en el mapa para marcar el Origen (A)'
                 : pickingLocationFor === 'destination'
-                ? 'Haz clic en el mapa para marcar el Destino (B)'
-                : 'Haz clic en el mapa donde detectaste el foco de fisuras'}
+                ? 'Toca en el mapa para marcar el Destino (B)'
+                : pendingReportCoords
+                ? `Punto fijado: [${pendingReportCoords.lat.toFixed(4)}, ${pendingReportCoords.lng.toFixed(4)}]`
+                : 'Toca en el mapa la esquina o calle del foco hostil'}
             </span>
           </div>
-          {onCancelPicking && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancelPicking();
-              }}
-              className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[11px] border border-zinc-700 transition"
-            >
-              Cancelar
-            </button>
-          )}
+
+          <div className="flex items-center gap-1.5 ml-auto">
+            {pickingLocationFor === 'report' && pendingReportCoords && onConfirmReportCoords && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConfirmReportCoords();
+                }}
+                className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
+              >
+                Listo, volver al formulario
+              </button>
+            )}
+
+            {onCancelPicking && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelPicking();
+                }}
+                className="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs border border-zinc-700 transition"
+              >
+                {pickingLocationFor === 'report' ? 'Volver al formulario' : 'Cancelar'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

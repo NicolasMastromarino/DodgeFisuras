@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { MapComponent } from './components/MapComponent';
 import { RoutePlanner } from './components/RoutePlanner';
-import { ReportModal } from './components/ReportModal';
+import { ReportModal, ReportDraftData } from './components/ReportModal';
 import { SOSModal } from './components/SOSModal';
 import { HotspotDetailsDrawer } from './components/HotspotDetailsDrawer';
 import { FilterToolbar } from './components/FilterToolbar';
@@ -13,6 +13,17 @@ import { computeAvoidanceRoutes } from './utils/routingEngine';
 import { Map, Navigation, AlertTriangle, ShieldCheck, ListFilter } from 'lucide-react';
 
 const STORAGE_KEY_HOTSPOTS = 'fisura_radar_ba_hotspots';
+
+const initialReportDraft: ReportDraftData = {
+  title: '',
+  barrio: 'Balvanera / Once',
+  crossStreets: '',
+  severity: 'high',
+  category: 'active_fisura',
+  description: '',
+  safetyTip: '',
+  timeWindow: 'Noche cerrada (21:00 - 06:00)',
+};
 
 export default function App() {
   // Hotspots state with localStorage persistence
@@ -46,7 +57,14 @@ export default function App() {
 
   // Location picking on map
   const [pickingLocationFor, setPickingLocationFor] = useState<'origin' | 'destination' | 'report' | null>(null);
+  // Report Draft State preserved across map picking
+  const [reportDraft, setReportDraft] = useState<ReportDraftData>(initialReportDraft);
   const [pendingReportCoords, setPendingReportCoords] = useState<Coordinates | null>(null);
+
+  const handleResetReportDraft = useCallback(() => {
+    setReportDraft(initialReportDraft);
+    setPendingReportCoords(null);
+  }, []);
 
   // Modals & Drawers
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -390,13 +408,23 @@ export default function App() {
             destination={destination}
             mapTheme={mapTheme}
             pickingLocationFor={pickingLocationFor}
-            onCancelPicking={() => setPickingLocationFor(null)}
+            onCancelPicking={() => {
+              if (pickingLocationFor === 'report') {
+                setIsReportModalOpen(true);
+              }
+              setPickingLocationFor(null);
+            }}
             onMapClickCoordinates={handleMapClickCoordinates}
             onSelectHotspot={setSelectedHotspot}
             onConfirmHotspot={handleConfirmHotspot}
             userLocation={userLocation}
             centerCoords={centerCoords}
             zoomLevel={zoomLevel}
+            pendingReportCoords={pendingReportCoords}
+            onConfirmReportCoords={() => {
+              setPickingLocationFor(null);
+              setIsReportModalOpen(true);
+            }}
           />
         </div>
       </div>
@@ -454,7 +482,13 @@ export default function App() {
         onClose={() => setIsReportModalOpen(false)}
         onSaveReport={handleSaveReport}
         initialCoords={pendingReportCoords}
-        onPickCoordsOnMap={() => setPickingLocationFor('report')}
+        onPickCoordsOnMap={() => {
+          setPickingLocationFor('report');
+          setMobileTab('map');
+        }}
+        draft={reportDraft}
+        onUpdateDraft={setReportDraft}
+        onResetDraft={handleResetReportDraft}
       />
 
       {/* Emergency 911 SOS & Companion Modal */}

@@ -27,7 +27,12 @@
 
 .leaflet-container {
   font-family: inherit !important;
-  background-color: #09090b !important;
+  background-color: #18181b !important;
+}
+
+/* Tactical night mode filter for OpenStreetMap tiles (100% free, zero API key required, zero watermark) */
+.leaflet-tile-night {
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) !important;
 }
 
 /* Pulse animation for high risk hotspots */
@@ -48,9 +53,4 @@
 
 .animate-danger-pulse {
   animation: danger-pulse 2s infinite ease-in-out;
-}
-
-/* Tactical night mode filter for OpenStreetMap tiles (100% free, zero API key required) */
-.leaflet-tile-night {
-  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) !important;
 }

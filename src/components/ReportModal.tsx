@@ -2,12 +2,26 @@ import React, { useState } from 'react';
 import { X, AlertOctagon, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
 import { Coordinates, Hotspot, HotspotCategory, SeverityLevel } from '../types';
 
+export interface ReportDraftData {
+  title: string;
+  barrio: string;
+  crossStreets: string;
+  severity: SeverityLevel;
+  category: HotspotCategory;
+  description: string;
+  safetyTip: string;
+  timeWindow: string;
+}
+
 interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveReport: (newHotspot: Hotspot) => void;
   initialCoords: Coordinates | null;
   onPickCoordsOnMap: () => void;
+  draft: ReportDraftData;
+  onUpdateDraft: (updater: (prev: ReportDraftData) => ReportDraftData) => void;
+  onResetDraft: () => void;
 }
 
 const BARRIOS_CABA = [
@@ -36,22 +50,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   onSaveReport,
   initialCoords,
   onPickCoordsOnMap,
+  draft,
+  onUpdateDraft,
+  onResetDraft,
 }) => {
-  const [title, setTitle] = useState('');
-  const [barrio, setBarrio] = useState(BARRIOS_CABA[0]);
-  const [crossStreets, setCrossStreets] = useState('');
-  const [severity, setSeverity] = useState<SeverityLevel>('high');
-  const [category, setCategory] = useState<HotspotCategory>('active_fisura');
-  const [description, setDescription] = useState('');
-  const [safetyTip, setSafetyTip] = useState('');
-  const [timeWindow, setTimeWindow] = useState('Noche cerrada (21:00 - 06:00)');
   const [isSuccess, setIsSuccess] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !crossStreets.trim()) return;
+    if (!draft.title.trim() || !draft.crossStreets.trim()) return;
 
     // Use selected coords or default to central Buenos Aires coords with slight random jitter
     const coords: Coordinates = initialCoords || {
@@ -61,19 +70,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
     const newHotspot: Hotspot = {
       id: `community-${Date.now()}`,
-      title: title.trim(),
-      barrio,
-      crossStreets: crossStreets.trim(),
+      title: draft.title.trim(),
+      barrio: draft.barrio,
+      crossStreets: draft.crossStreets.trim(),
       lat: coords.lat,
       lng: coords.lng,
-      severity,
-      category,
-      description: description.trim() || 'Reportado por vecino de la zona como punto de alerta nocturna.',
-      safetyTip: safetyTip.trim() || 'Cruzar a la acera de enfrente y transitar por avenidas iluminadas.',
-      dangerRadiusMeters: severity === 'high' ? 160 : severity === 'medium' ? 120 : 90,
+      severity: draft.severity,
+      category: draft.category,
+      description: draft.description.trim() || 'Reportado por vecino de la zona como punto de alerta nocturna.',
+      safetyTip: draft.safetyTip.trim() || 'Cruzar a la acera de enfrente y transitar por avenidas iluminadas.',
+      dangerRadiusMeters: draft.severity === 'high' ? 160 : draft.severity === 'medium' ? 120 : 90,
       reportedAt: 'Recién ahora',
       confirmedCount: 1,
-      timeWindow,
+      timeWindow: draft.timeWindow,
       isCommunityReported: true,
     };
 
@@ -81,12 +90,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     setIsSuccess(true);
     setTimeout(() => {
       setIsSuccess(false);
+      onResetDraft();
       onClose();
-      // Reset form
-      setTitle('');
-      setCrossStreets('');
-      setDescription('');
-      setSafetyTip('');
     }, 1200);
   };
 
@@ -134,8 +139,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 id="input-hotspot-title"
                 type="text"
                 required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={draft.title}
+                onChange={(e) => onUpdateDraft((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder="Ej: Salida Subte H Pueyrredón / Ranchada bajo puente"
                 className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
               />
@@ -149,8 +154,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 </label>
                 <select
                   id="select-hotspot-barrio"
-                  value={barrio}
-                  onChange={(e) => setBarrio(e.target.value)}
+                  value={draft.barrio}
+                  onChange={(e) => onUpdateDraft((prev) => ({ ...prev, barrio: e.target.value }))}
                   className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-rose-500"
                 >
                   {BARRIOS_CABA.map((b) => (
@@ -169,8 +174,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   id="input-hotspot-cross-streets"
                   type="text"
                   required
-                  value={crossStreets}
-                  onChange={(e) => setCrossStreets(e.target.value)}
+                  value={draft.crossStreets}
+                  onChange={(e) => onUpdateDraft((prev) => ({ ...prev, crossStreets: e.target.value }))}
                   placeholder="Ej: Av. Rivadavia & Riobamba"
                   className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
                 />
@@ -186,9 +191,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <button
                   type="button"
                   id="btn-severity-high"
-                  onClick={() => setSeverity('high')}
+                  onClick={() => onUpdateDraft((prev) => ({ ...prev, severity: 'high' }))}
                   className={`p-2 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1 ${
-                    severity === 'high'
+                    draft.severity === 'high'
                       ? 'bg-rose-950/60 border-rose-500 text-rose-300 ring-1 ring-rose-500'
                       : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                   }`}
@@ -200,9 +205,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <button
                   type="button"
                   id="btn-severity-medium"
-                  onClick={() => setSeverity('medium')}
+                  onClick={() => onUpdateDraft((prev) => ({ ...prev, severity: 'medium' }))}
                   className={`p-2 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1 ${
-                    severity === 'medium'
+                    draft.severity === 'medium'
                       ? 'bg-amber-950/60 border-amber-500 text-amber-300 ring-1 ring-amber-500'
                       : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                   }`}
@@ -214,9 +219,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <button
                   type="button"
                   id="btn-severity-low"
-                  onClick={() => setSeverity('low')}
+                  onClick={() => onUpdateDraft((prev) => ({ ...prev, severity: 'low' }))}
                   className={`p-2 rounded-xl text-xs font-bold border transition flex flex-col items-center gap-1 ${
-                    severity === 'low'
+                    draft.severity === 'low'
                       ? 'bg-yellow-950/60 border-yellow-500 text-yellow-300 ring-1 ring-yellow-500'
                       : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                   }`}
@@ -234,8 +239,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               </label>
               <select
                 id="select-hotspot-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as HotspotCategory)}
+                value={draft.category}
+                onChange={(e) => onUpdateDraft((prev) => ({ ...prev, category: e.target.value as HotspotCategory }))}
                 className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-rose-500"
               >
                 <option value="active_fisura">Fisura Activo / Persona alterada o agresiva</option>
@@ -255,8 +260,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <textarea
                 id="textarea-hotspot-description"
                 rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={draft.description}
+                onChange={(e) => onUpdateDraft((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Ej: Se juntan 3 o 4 personas en la entrada cerrada de la farmacia, fuman paco y gritan a los que pasan..."
                 className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
               />
@@ -269,8 +274,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <input
                 id="input-hotspot-safety-tip"
                 type="text"
-                value={safetyTip}
-                onChange={(e) => setSafetyTip(e.target.value)}
+                value={draft.safetyTip}
+                onChange={(e) => onUpdateDraft((prev) => ({ ...prev, safetyTip: e.target.value }))}
                 placeholder="Ej: Doblar por calle Mitre o cruzar a la vereda de enfrente iluminada"
                 className="w-full px-3 py-2 text-xs rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
               />
@@ -279,11 +284,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             {/* Map Coords Status & Pick on Map Button */}
             <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800/80 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-sky-400" />
+                <MapPin className="w-4 h-4 text-sky-400 shrink-0" />
                 <span className="text-zinc-300">
-                  {initialCoords
-                    ? `Coordenadas: [${initialCoords.lat.toFixed(4)}, ${initialCoords.lng.toFixed(4)}]`
-                    : 'Ubicación automática aproximada'}
+                  {initialCoords ? (
+                    <span className="text-emerald-400 font-semibold">
+                      Ubicación fijada: [{initialCoords.lat.toFixed(4)}, {initialCoords.lng.toFixed(4)}]
+                    </span>
+                  ) : (
+                    'Ubicación automática aproximada'
+                  )}
                 </span>
               </div>
               <button
@@ -293,9 +302,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   onClose();
                   onPickCoordsOnMap();
                 }}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sky-300 border border-zinc-700 text-[11px] transition"
+                className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sky-300 hover:text-white border border-zinc-700 text-xs font-semibold transition shrink-0"
               >
-                Elegir en mapa
+                {initialCoords ? 'Cambiar en mapa' : 'Elegir en mapa'}
               </button>
             </div>
 
