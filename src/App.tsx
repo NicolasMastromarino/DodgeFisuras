@@ -37,9 +37,9 @@ export default function App() {
     return INITIAL_HOTSPOTS;
   });
 
-  // Active Origin & Destination (Initialized with realistic Once -> Almagro preset)
-  const [origin, setOrigin] = useState<RoutePoint | null>(SAFETY_PRESETS[0].origin);
-  const [destination, setDestination] = useState<RoutePoint | null>(SAFETY_PRESETS[0].destination);
+  // Active Origin & Destination (No default route loaded)
+  const [origin, setOrigin] = useState<RoutePoint | null>(null);
+  const [destination, setDestination] = useState<RoutePoint | null>(null);
 
   // Selected route option: 'safe' (avoidance bypass) vs 'direct'
   const [selectedRouteType, setSelectedRouteType] = useState<'safe' | 'direct'>('safe');
@@ -55,10 +55,10 @@ export default function App() {
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [locationPickerTarget, setLocationPickerTarget] = useState<'origin' | 'destination'>('origin');
 
-  // Map settings
+  // Map settings (Default centered on Buenos Aires)
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
-  const [centerCoords, setCenterCoords] = useState<Coordinates>({ lat: -34.606, lng: -58.412 });
-  const [zoomLevel, setZoomLevel] = useState<number>(14);
+  const [centerCoords, setCenterCoords] = useState<Coordinates>({ lat: -34.6037, lng: -58.3816 });
+  const [zoomLevel, setZoomLevel] = useState<number>(13);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
 
   // Filters & Search
@@ -78,10 +78,37 @@ export default function App() {
     }
   }, [hotspots]);
 
-  // Compute avoidance route whenever origin, destination or hotspots change
-  const activeRoute: RouteCalculationResult | null = useMemo(() => {
-    if (!origin || !destination) return null;
-    return computeAvoidanceRoutes(origin, destination, hotspots);
+  // Compute avoidance route asynchronously whenever origin, destination or hotspots change
+  const [activeRoute, setActiveRoute] = useState<RouteCalculationResult | null>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!origin || !destination) {
+      setActiveRoute(null);
+      setIsCalculatingRoute(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsCalculatingRoute(true);
+
+    computeAvoidanceRoutes(origin, destination, hotspots)
+      .then((result) => {
+        if (isMounted) {
+          setActiveRoute(result);
+          setIsCalculatingRoute(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to compute avoidance routes:', err);
+        if (isMounted) {
+          setIsCalculatingRoute(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [origin, destination, hotspots]);
 
   // Filtered hotspots based on search & category
@@ -343,7 +370,7 @@ export default function App() {
               }}
               onSelectPreset={handleSelectPreset}
               presets={SAFETY_PRESETS}
-              isCalculating={false}
+              isCalculating={isCalculatingRoute}
               onShareWhatsApp={handleShareWhatsApp}
             />
           )}

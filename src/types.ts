@@ -46,6 +46,7 @@ export interface RouteOption {
   hazardCount: number;
   hazardsEncountered: Hotspot[];
   highlights: string[];
+  streets?: string[];
 }
 
 export interface RouteCalculationResult {

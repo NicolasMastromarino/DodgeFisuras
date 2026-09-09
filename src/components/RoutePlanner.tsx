@@ -38,6 +38,8 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
   activeRoute,
   selectedRouteType,
   onSelectRouteType,
+  onSetOrigin,
+  onSetDestination,
   onSwapPoints,
   onStartPicking,
   onOpenLocationPicker,
@@ -59,9 +61,23 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
               Trazar Ruta Anti-Fisuras
             </h2>
           </div>
-          <span className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
-            Buenos Aires
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold text-zinc-400 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+              Buenos Aires
+            </span>
+            {(origin || destination) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSetOrigin(null);
+                  onSetDestination(null);
+                }}
+                className="text-[10px] text-zinc-400 hover:text-rose-400 underline underline-offset-2 transition"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-xs text-zinc-400">
           Calcula desvíos inteligentes para esquivar ranchadas y puntos peligrosos nocturnos
@@ -173,6 +189,32 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Loading Route Calculation State */}
+        {isCalculating && (
+          <div className="p-3.5 rounded-xl bg-sky-950/40 border border-sky-500/30 text-center space-y-2 animate-pulse">
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-sky-300">
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+              <span>Calculando trayecto por calles de Buenos Aires...</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">
+              Consultando red vial peatonal y esquivando focos de fisuras activos
+            </p>
+          </div>
+        )}
+
+        {/* Empty State when no route is planned and not calculating */}
+        {!activeRoute && !isCalculating && (
+          <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-center space-y-2">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto">
+              <Navigation className="w-5 h-5" />
+            </div>
+            <h4 className="text-xs font-bold text-zinc-200">Sin ruta activa</h4>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Toca <strong>Punto de Partida</strong> o <strong>Destino</strong> arriba para buscar estaciones y calles como en Uber, o elige una de las rutas habituales.
+            </p>
+          </div>
+        )}
 
         {/* Route Evaluation & Toggle (When activeRoute exists) */}
         {activeRoute && (
@@ -292,6 +334,26 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Real Street Itinerary */}
+                {activeRoute.safeRoute.streets && activeRoute.safeRoute.streets.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-emerald-800/30">
+                    <span className="text-[11px] font-semibold text-zinc-400 block mb-1.5 flex items-center gap-1.5">
+                      <Navigation className="w-3 h-3 text-emerald-400" />
+                      Calles del trayecto seguro:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {activeRoute.safeRoute.streets.map((street, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-900/90 border border-emerald-500/20 text-emerald-200 font-medium"
+                        >
+                          {street}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-800/40 space-y-2">
@@ -315,6 +377,26 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Real Street Itinerary */}
+                {activeRoute.directRoute.streets && activeRoute.directRoute.streets.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-rose-800/30">
+                    <span className="text-[11px] font-semibold text-zinc-400 block mb-1.5 flex items-center gap-1.5">
+                      <Navigation className="w-3 h-3 text-rose-400" />
+                      Calles del trayecto directo:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {activeRoute.directRoute.streets.map((street, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-900/90 border border-rose-500/20 text-rose-200 font-medium"
+                        >
+                          {street}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

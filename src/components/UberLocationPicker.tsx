@@ -51,14 +51,22 @@ export const UberLocationPicker: React.FC<UberLocationPickerProps> = ({
     setNominatimResults([]);
   }, [initialTargetField, isOpen]);
 
-  // Focus input when opened
+  // Focus input and listen for ESC key when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, activeField]);
+  }, [isOpen, activeField, onClose]);
 
   // Live Debounced Online Search via OpenStreetMap Nominatim for Buenos Aires addresses
   useEffect(() => {
@@ -155,8 +163,14 @@ export const UberLocationPicker: React.FC<UberLocationPickerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[85vh] bg-zinc-900 sm:rounded-2xl border-0 sm:border border-zinc-800 text-zinc-100 shadow-2xl flex flex-col overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[85vh] bg-zinc-900 sm:rounded-2xl border-0 sm:border border-zinc-800 text-zinc-100 shadow-2xl flex flex-col overflow-hidden"
+      >
         {/* Top App Header like Uber */}
         <div className="p-4 border-b border-zinc-800 bg-zinc-900/95 sticky top-0 z-20">
           <div className="flex items-center justify-between mb-3">

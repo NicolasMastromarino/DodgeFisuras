@@ -18,7 +18,7 @@ export const HotspotDetailsDrawer: React.FC<HotspotDetailsDrawerProps> = ({
   if (!hotspot) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 w-full max-w-sm sm:max-w-md bg-zinc-900/95 border border-zinc-700/80 rounded-2xl shadow-2xl p-4 text-zinc-100 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200">
+    <div className="fixed bottom-4 right-4 z-[2000] w-full max-w-sm sm:max-w-md bg-zinc-900/95 border border-zinc-700/80 rounded-2xl shadow-2xl p-4 text-zinc-100 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2">
