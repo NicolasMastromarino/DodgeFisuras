@@ -25,8 +25,9 @@ const firebaseConfig = {
   appId: configJson.appId || import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+const databaseId = configJson.firestoreDatabaseId || import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || '(default)';
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const db = getFirestore(app, configJson.firestoreDatabaseId || '(default)');
+export const db = getFirestore(app, databaseId);
 
 const HOTSPOTS_COLLECTION = 'hotspots';
 
