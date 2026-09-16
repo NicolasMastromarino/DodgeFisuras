@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, AlertOctagon, MapPin, ShieldAlert, CheckCircle } from 'lucide-react';
+import { X, AlertOctagon, ShieldAlert, CheckCircle } from 'lucide-react';
 import { Coordinates, Hotspot, HotspotCategory, SeverityLevel } from '../types';
+import { ReportMiniMap } from './ReportMiniMap';
 
 export interface ReportDraftData {
   title: string;
@@ -18,10 +19,13 @@ interface ReportModalProps {
   onClose: () => void;
   onSaveReport: (newHotspot: Hotspot) => void;
   initialCoords: Coordinates | null;
+  onUpdateCoords: (coords: Coordinates) => void;
   onPickCoordsOnMap: () => void;
   draft: ReportDraftData;
   onUpdateDraft: (updater: (prev: ReportDraftData) => ReportDraftData) => void;
   onResetDraft: () => void;
+  mapTheme?: 'dark' | 'light';
+  userLocation?: Coordinates | null;
 }
 
 const BARRIOS_CABA = [
@@ -49,10 +53,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   onClose,
   onSaveReport,
   initialCoords,
+  onUpdateCoords,
   onPickCoordsOnMap,
   draft,
   onUpdateDraft,
   onResetDraft,
+  mapTheme = 'dark',
+  userLocation,
 }) => {
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -281,32 +288,18 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               />
             </div>
 
-            {/* Map Coords Status & Pick on Map Button */}
-            <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800/80 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-sky-400 shrink-0" />
-                <span className="text-zinc-300">
-                  {initialCoords ? (
-                    <span className="text-emerald-400 font-semibold">
-                      Ubicación fijada: [{initialCoords.lat.toFixed(4)}, {initialCoords.lng.toFixed(4)}]
-                    </span>
-                  ) : (
-                    'Ubicación automática aproximada'
-                  )}
-                </span>
-              </div>
-              <button
-                type="button"
-                id="btn-pick-coords-map"
-                onClick={() => {
-                  onClose();
-                  onPickCoordsOnMap();
-                }}
-                className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sky-300 hover:text-white border border-zinc-700 text-xs font-semibold transition shrink-0"
-              >
-                {initialCoords ? 'Cambiar en mapa' : 'Elegir en mapa'}
-              </button>
-            </div>
+            {/* Embedded interactive map right inside the modal */}
+            <ReportMiniMap
+              coordinates={initialCoords}
+              onChangeCoordinates={(newCoords) => onUpdateCoords(newCoords)}
+              mapTheme={mapTheme}
+              selectedBarrio={draft.barrio}
+              userLocation={userLocation}
+              onOpenFullScreenPicker={() => {
+                onClose();
+                onPickCoordsOnMap();
+              }}
+            />
 
             {/* Footer buttons */}
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-zinc-800">

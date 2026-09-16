@@ -30,9 +30,9 @@
   background-color: #18181b !important;
 }
 
-/* Tactical night mode filter for OpenStreetMap tiles (100% free, zero API key required, zero watermark) */
-.leaflet-tile-night {
-  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) !important;
+/* Tactical dark mode filter for OpenStreetMap tiles - 100% free, zero API key required, ZERO WATERMARK */
+.leaflet-tile-dark {
+  filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%) !important;
 }
 
 /* Pulse animation for high risk hotspots */

@@ -61,7 +61,18 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     // Add Zoom Control to bottom right to avoid header conflict
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Layers groups
+    // Add Base Tile Layer immediately to ensure map is never blank/black
+    const tileUrl = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+    const tileLayer = L.tileLayer(tileUrl, {
+      maxZoom: 19,
+      subdomains: 'abc',
+      className: mapTheme === 'dark' ? 'leaflet-tile-dark' : '',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+    }).addTo(map);
+    tileLayerRef.current = tileLayer;
+
+    // Overlay layers groups
     circlesLayerRef.current = L.layerGroup().addTo(map);
     markersLayerRef.current = L.layerGroup().addTo(map);
     routesLayerRef.current = L.layerGroup().addTo(map);
@@ -69,6 +80,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     reportMarkerLayerRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
+
+    // Trigger initial invalidate size
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
     // ResizeObserver to ensure Leaflet recalculates dimensions when sidebar or tab toggles
     const resizeObserver = new ResizeObserver(() => {
@@ -85,20 +101,43 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
+      tileLayerRef.current = null;
     };
   }, []);
 
-  // Invalidate map size when pickingLocationFor changes to guarantee tiles render properly
+  // Invalidate map size and ensure tiles are attached when pickingLocationFor or theme changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     mapInstanceRef.current.invalidateSize();
-    const timer = setTimeout(() => {
-      mapInstanceRef.current?.invalidateSize();
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [pickingLocationFor]);
 
-  // Update Base Tiles based on theme using standard OpenStreetMap (100% free, no API key, no watermark)
+    if (!tileLayerRef.current && mapInstanceRef.current) {
+      const tileUrl = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+      tileLayerRef.current = L.tileLayer(tileUrl, {
+        maxZoom: 19,
+        subdomains: 'abc',
+        className: mapTheme === 'dark' ? 'leaflet-tile-dark' : '',
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+      }).addTo(mapInstanceRef.current);
+    }
+
+    const timer1 = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 50);
+    const timer2 = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 150);
+    const timer3 = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 350);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [pickingLocationFor, mapTheme]);
+
+  // Update Base Tiles based on theme (100% Free OpenStreetMap HOT - Zero watermark, zero API key required)
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
@@ -106,14 +145,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
     }
 
-    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    const attribution =
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
+    const tileUrl = 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
 
     tileLayerRef.current = L.tileLayer(tileUrl, {
       maxZoom: 19,
-      className: mapTheme === 'dark' ? 'leaflet-tile-night' : '',
-      attribution,
+      subdomains: 'abc',
+      className: mapTheme === 'dark' ? 'leaflet-tile-dark' : '',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
     }).addTo(mapInstanceRef.current);
   }, [mapTheme]);
 
@@ -361,20 +400,24 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     if (pendingReportCoords) {
       const reportPin = L.divIcon({
         html: `
-          <div class="relative flex items-center justify-center" style="width: 40px; height: 40px;">
-            <div class="absolute inset-0 rounded-full bg-rose-500/40 animate-ping"></div>
-            <div class="w-9 h-9 rounded-2xl bg-rose-600 border-2 border-white shadow-2xl flex items-center justify-center text-white text-base">
-              ⚠️
+          <div class="relative flex items-center justify-center" style="width: 48px; height: 48px;">
+            <div class="absolute -inset-2 rounded-full bg-rose-500/50 animate-ping"></div>
+            <div class="w-11 h-11 rounded-2xl bg-rose-600 border-2 border-white shadow-2xl flex items-center justify-center text-white text-xl">
+              📍
             </div>
           </div>
         `,
         className: 'report-pin-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
       });
 
       L.marker([pendingReportCoords.lat, pendingReportCoords.lng], { icon: reportPin })
-        .bindTooltip('Foco de alerta a reportar', { permanent: true, direction: 'top', offset: [0, -20] })
+        .bindTooltip(`📍 Punto marcado: [${pendingReportCoords.lat.toFixed(4)}, ${pendingReportCoords.lng.toFixed(4)}]`, {
+          permanent: true,
+          direction: 'top',
+          offset: [0, -24],
+        })
         .addTo(reportMarkerLayerRef.current);
     }
   }, [pendingReportCoords]);
@@ -390,42 +433,53 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
       {/* Picking Location Overlay Banner */}
       {pickingLocationFor && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2.5 rounded-2xl bg-zinc-900/95 border border-sky-500/60 shadow-2xl flex flex-wrap items-center gap-3 text-xs font-medium text-zinc-100 backdrop-blur-md max-w-[92vw]">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-            <span className="font-semibold text-sky-200">
-              {pickingLocationFor === 'origin'
-                ? 'Toca en el mapa para marcar el Origen (A)'
-                : pickingLocationFor === 'destination'
-                ? 'Toca en el mapa para marcar el Destino (B)'
-                : pendingReportCoords
-                ? `Punto fijado: [${pendingReportCoords.lat.toFixed(4)}, ${pendingReportCoords.lng.toFixed(4)}]`
-                : 'Toca en el mapa la esquina o calle del foco hostil'}
-            </span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] px-4 py-3 rounded-2xl bg-zinc-900/95 border border-sky-500/60 shadow-2xl flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-zinc-100 backdrop-blur-md max-w-[94vw] sm:max-w-xl">
+          <div className="flex items-center gap-2.5">
+            <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping shrink-0" />
+            <div>
+              <p className="font-bold text-sky-200 text-xs sm:text-sm">
+                {pickingLocationFor === 'origin'
+                  ? 'Toca en el mapa para marcar el Origen (A)'
+                  : pickingLocationFor === 'destination'
+                  ? 'Toca en el mapa para marcar el Destino (B)'
+                  : pendingReportCoords
+                  ? '📍 Ubicación seleccionada en el mapa'
+                  : 'Toca en el mapa la esquina o calle del foco hostil'}
+              </p>
+              <p className="text-[11px] text-zinc-400">
+                {pickingLocationFor === 'report'
+                  ? pendingReportCoords
+                    ? `[${pendingReportCoords.lat.toFixed(4)}, ${pendingReportCoords.lng.toFixed(4)}] • Haz clic en otro lugar si quieres moverlo`
+                    : 'Haz clic exactamente en la esquina o cuadra donde viste el peligro'
+                  : 'Haz clic en el mapa para fijar la coordenada'}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="flex items-center gap-2 ml-auto">
             {pickingLocationFor === 'report' && pendingReportCoords && onConfirmReportCoords && (
               <button
                 type="button"
+                id="btn-confirm-picked-coords"
                 onClick={(e) => {
                   e.stopPropagation();
                   onConfirmReportCoords();
                 }}
-                className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950 flex items-center gap-1.5 transition"
               >
-                Listo, volver al formulario
+                <span>✓ Confirmar este punto</span>
               </button>
             )}
 
             {onCancelPicking && (
               <button
                 type="button"
+                id="btn-cancel-picking"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCancelPicking();
                 }}
-                className="px-2.5 py-1 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs border border-zinc-700 transition"
+                className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs border border-zinc-700 transition"
               >
                 {pickingLocationFor === 'report' ? 'Volver al formulario' : 'Cancelar'}
               </button>

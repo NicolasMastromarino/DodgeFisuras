@@ -185,9 +185,10 @@ export default function App() {
         setPickingLocationFor(null);
         setMobileTab('planner');
       } else if (pickingLocationFor === 'report') {
+        // Set the report coordinates so the pulsing 📍 pin appears on the map
         setPendingReportCoords(coords);
-        setPickingLocationFor(null);
-        setIsReportModalOpen(true);
+        // Keep pickingLocationFor active so the user clearly sees where they clicked
+        // and can click "✓ Confirmar este punto" or click another corner to adjust
       }
     },
     [pickingLocationFor]
@@ -476,12 +477,13 @@ export default function App() {
         }}
       />
 
-      {/* Community Report Hotspot Modal */}
+      {/* Community Report Hotspot Modal with Embedded Map */}
       <ReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         onSaveReport={handleSaveReport}
         initialCoords={pendingReportCoords}
+        onUpdateCoords={setPendingReportCoords}
         onPickCoordsOnMap={() => {
           setPickingLocationFor('report');
           setMobileTab('map');
@@ -489,6 +491,8 @@ export default function App() {
         draft={reportDraft}
         onUpdateDraft={setReportDraft}
         onResetDraft={handleResetReportDraft}
+        mapTheme={mapTheme}
+        userLocation={userLocation}
       />
 
       {/* Emergency 911 SOS & Companion Modal */}
