@@ -10,6 +10,11 @@ import { UberLocationPicker } from './components/UberLocationPicker';
 import { INITIAL_HOTSPOTS, SAFETY_PRESETS } from './data/hotspots';
 import { Coordinates, Hotspot, RouteCalculationResult, RoutePoint, SafetyPreset, SeverityLevel } from './types';
 import { computeAvoidanceRoutes } from './utils/routingEngine';
+import {
+  subscribeToHotspots,
+  saveHotspotToFirestore,
+  confirmHotspotInFirestore,
+} from './services/firebaseService';
 import { Map, Navigation, AlertTriangle, ShieldCheck, ListFilter } from 'lucide-react';
 
 const STORAGE_KEY_HOTSPOTS = 'fisura_radar_ba_hotspots';
@@ -87,7 +92,18 @@ export default function App() {
   // Mobile layout tab
   const [mobileTab, setMobileTab] = useState<'map' | 'planner' | 'list'>('map');
 
-  // Persist hotspots on changes
+  // Real-time Firestore synchronization
+  useEffect(() => {
+    const unsubscribe = subscribeToHotspots((syncedHotspots) => {
+      setHotspots(syncedHotspots);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Persist hotspots to localStorage as local fallback
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_HOTSPOTS, JSON.stringify(hotspots));
@@ -226,15 +242,25 @@ export default function App() {
     if (selectedHotspot && selectedHotspot.id === id) {
       setSelectedHotspot((prev) => (prev ? { ...prev, confirmedCount: prev.confirmedCount + 1 } : null));
     }
+    // Update count in Firestore for all users
+    confirmHotspotInFirestore(id);
   };
 
   // Save new community report
-  const handleSaveReport = (newHotspot: Hotspot) => {
+  const handleSaveReport = async (newHotspot: Hotspot) => {
+    // Optimistic local state update
     setHotspots((prev) => [newHotspot, ...prev]);
     setCenterCoords({ lat: newHotspot.lat, lng: newHotspot.lng });
     setZoomLevel(16);
     setSelectedHotspot(newHotspot);
     setPendingReportCoords(null);
+
+    // Save to Firestore so other users & incognito sessions see it
+    try {
+      await saveHotspotToFirestore(newHotspot);
+    } catch (err) {
+      console.warn('Firestore write failed, report remains saved locally:', err);
+    }
   };
 
   // Geolocation request

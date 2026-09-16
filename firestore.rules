@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Community reports / hotspots
+    match /hotspots/{hotspotId} {
+      // Allow everyone to read reports (public community safety map)
+      allow read: if true;
+      
+      // Allow any user to create reports with valid fields
+      allow create: if request.resource.data.title is string
+                    && request.resource.data.lat is number
+                    && request.resource.data.lng is number
+                    && request.resource.data.severity in ['high', 'medium', 'low']
+                    && request.resource.data.category is string;
+
+      // Allow confirming reports (incrementing confirmedCount)
+      allow update: if true;
+
+      // Restrict deletes
+      allow delete: if false;
+    }
+  }
+}

@@ -34,9 +34,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
               DodgeFisura <span className="text-rose-400 font-extrabold text-xs sm:text-sm px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">BA</span>
             </h1>
-            <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+            <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full" title="Sincronizado en tiempo real con la comunidad">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Radar Nocturno CABA
+              <span>En vivo</span>
             </span>
           </div>
           <p className="text-xs text-zinc-400 hidden sm:block">
